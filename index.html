@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <!-- השורה הבאה קריטית להתאמה לנייד -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>החידון של [הכנס שם הילדה]</title>
+    <style>
+        :root {
+            --bg: #1b1b2f; --card: #162447; --text: #fff;
+            --primary: #e43f5a; --secondary: #1f4068;
+            --success: #4caf50; --error: #f44336;
+        }
+        body {
+            background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; margin: 0; padding: 15px; box-sizing: border-box;
+        }
+        .card {
+            background: var(--card); padding: 30px 20px; border-radius: 20px;
+            width: 100%; max-width: 400px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 { font-size: 3rem; margin: 10px 0; direction: ltr; }
+        .score { font-size: 1.2rem; color: #ffd700; font-weight: bold; margin-bottom: 20px; }
+        input {
+            font-size: 2rem; padding: 15px; width: 80%; text-align: center;
+            border: 2px solid var(--secondary); border-radius: 10px;
+            background: transparent; color: var(--text); margin-bottom: 15px;
+        }
+        button {
+            font-size: 1.2rem; font-weight: bold; padding: 15px; width: 100%;
+            border: none; border-radius: 10px; color: white; cursor: pointer;
+            margin-bottom: 10px; transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary); }
+        .btn-secondary { background: var(--secondary); font-size: 1rem; }
+        #options-stage { display: none; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .option-btn { background: var(--secondary); font-size: 1.8rem; padding: 20px; margin: 0; }
+        .feedback { height: 24px; color: var(--primary); font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="score">ניקוד: <span id="score-display">0</span></div>
+        <div class="feedback" id="feedback-msg"></div>
+        <h1 id="question-display">? = 5 × 5</h1>
+        
+        <div id="input-stage">
+            <!-- pattern ותכונות נוספות כדי להקפיץ מקלדת מספרים נוחה בנייד -->
+            <input type="number" id="answer-input" inputmode="numeric" pattern="[0-9]*" placeholder="תשובה">
+            <button class="btn-primary" onclick="checkInput()">בדקי אותי! (פי 2 נקודות)</button>
+            <button class="btn-secondary" onclick="showOptions()">אני צריכה אפשרויות</button>
+        </div>
+
+        <div id="options-stage"></div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentAnswer = 0;
+
+        function nextQuestion() {
+            // הגרלת מספרים מ-2 עד 10
+            const a = Math.floor(Math.random() * 9) + 2;
+            const b = Math.floor(Math.random() * 9) + 2;
+            currentAnswer = a * b;
+            
+            document.getElementById('question-display').innerText = `? = ${a} ×${b}`;
+            document.getElementById('answer-input').value = '';
+            document.getElementById('feedback-msg').innerText = '';
+            
+            document.getElementById('input-stage').style.display = 'block';
+            document.getElementById('options-stage').style.display = 'none';
+            document.getElementById('answer-input').focus();
+        }
+
+        function checkInput() {
+            const userVal = parseInt(document.getElementById('answer-input').value);
+            if (userVal === currentAnswer) {
+                score += 20;
+                updateScore();
+                showFeedback('אלופה! נקודות כפולות! 🎉', 'var(--success)');
+                setTimeout(nextQuestion, 1500);
+            } else {
+                showFeedback('כמעט! בואי ננסה עם אפשרויות', 'var(--primary)');
+                showOptions();
+            }
+        }
+
+        function showOptions() {
+            document.getElementById('input-stage').style.display = 'none';
+            const optionsStage = document.getElementById('options-stage');
+            optionsStage.style.display = 'grid';
+            optionsStage.innerHTML = '';
+
+            // יצירת מסיחים חכמים
+            let options = new Set([currentAnswer]);
+            while(options.size < 4) {
+                let offset = (Math.floor(Math.random() * 3) + 1) * (Math.random() > 0.5 ? 1 : -1);
+                let distractor = currentAnswer + offset;
+                if(distractor > 0 && !options.has(distractor)) {
+                    options.add(distractor);
+                }
+            }
+
+            // ערבוב התשובות
+            const shuffled = Array.from(options).sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkOption(opt, btn);
+                optionsStage.appendChild(btn);
+            });
+        }
+
+        function checkOption(val, btn) {
+            if (val === currentAnswer) {
+                btn.style.background = 'var(--success)';
+                score += 10;
+                updateScore();
+                setTimeout(nextQuestion, 1000);
+            } else {
+                btn.style.background = 'var(--error)';
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score-display').innerText = score;
+        }
+
+        function showFeedback(text, color) {
+            const fb = document.getElementById('feedback-msg');
+            fb.innerText = text;
+            fb.style.color = color;
+        }
+
+        // התחלת המשחק
+        nextQuestion();
+    </script>
+</body>
+</html>
