@@ -15,19 +15,35 @@
             background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             height: 100vh; margin: 0; padding: 15px; box-sizing: border-box;
-            position: relative;
+            position: relative; overflow: hidden;
         }
         .card {
             background: var(--card); padding: 30px 20px; border-radius: 20px;
             width: 100%; max-width: 400px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative;
-            z-index: 10;
+            position: relative; z-index: 10; display: none; /* מוסתר כברירת מחדל */
         }
         
+        /* הסרת החצים (Spinners) משדה המספר */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* פס הזמן האדום */
+        .timer-container {
+            width: 100%; height: 8px; background: rgba(0,0,0,0.3);
+            border-radius: 5px; overflow: hidden; margin-bottom: 15px;
+        }
+        .timer-bar {
+            height: 100%; background: var(--error);
+            width: 100%; transition: width 0.1s linear;
+        }
+
         /* עיצוב 10 העיגולים */
         #progress-dots {
-            display: flex; justify-content: center; gap: 6px; margin-bottom: 25px;
+            display: flex; justify-content: center; gap: 6px; margin-bottom: 20px;
         }
         .dot {
             width: 28px; height: 28px; border-radius: 50%;
@@ -38,7 +54,8 @@
         .dot.green { background: var(--success); }
         .dot.red { background: var(--error); }
 
-        h1 { font-size: 3rem; margin: 10px 0; direction: ltr; }
+        h1 { font-size: 2.8rem; margin: 10px 0; direction: ltr; }
+        h2 { margin-top: 0; color: #ffd700; }
         .score { font-size: 1.2rem; color: #ffd700; font-weight: bold; margin-bottom: 10px; }
         
         input {
@@ -55,125 +72,242 @@
         .btn-secondary { background: var(--secondary); font-size: 1rem; }
         #options-stage { display: none; grid-template-columns: 1fr 1fr; gap: 10px; }
         .option-btn { background: var(--secondary); font-size: 1.8rem; padding: 20px; margin: 0; }
-        .feedback { height: 24px; color: var(--primary); font-weight: bold; margin-bottom: 10px; }
         
-        /* מסך סיכום */
-        #summary-stage { display: none; }
-        .summary-item { 
+        .feedback { height: 24px; color: var(--primary); font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; }
+        
+        /* רשימות ותצוגות מיוחדות */
+        .summary-item, .prize-item { 
             display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 10px; border-bottom: 1px solid var(--secondary);
-            font-size: 1.2rem; direction: rtl;
+            padding: 10px; border-bottom: 1px solid var(--secondary);
+            font-size: 1.1rem; direction: rtl;
         }
         .summary-item span[dir="ltr"] { font-weight: bold; }
+        
+        .stats-box {
+            background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px;
+            margin-bottom: 20px; text-align: right;
+        }
 
-        /* קרדיט למפתחת */
         .credit {
-            margin-top: 25px;
-            font-size: 0.9rem;
-            color: var(--text);
-            opacity: 0.6;
-            text-align: center;
-            letter-spacing: 0.5px;
+            margin-top: 25px; font-size: 0.9rem; color: var(--text);
+            opacity: 0.6; text-align: center; letter-spacing: 0.5px;
         }
     </style>
 </head>
 <body>
+
+    <!-- תפריט התחלה -->
+    <div class="card" id="start-stage" style="display: block;">
+        <h1>החידון של אגם ✨</h1>
+        <p>תרגול חכם של כל לוח הכפל!</p>
+        
+        <div class="stats-box">
+            <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">
+                🏆 שיא אישי: <span id="start-highscore">0</span>
+            </div>
+            <div>תרגילים שנשארו בלוח: <span id="start-bank-left">0</span>/100</div>
+        </div>
+
+        <div class="stats-box">
+            <div style="font-weight: bold; margin-bottom: 10px;">ארון הפרסים שלי:</div>
+            <div id="start-prizes" style="font-size: 1.1rem;">טרם הושגו פרסים</div>
+        </div>
+
+        <button class="btn-primary" onclick="startGame()" style="font-size: 1.5rem;">התחלי אימון!</button>
+    </div>
+
     <!-- מסך המשחק -->
     <div class="card" id="game-card">
         <div id="progress-dots"></div> 
         
+        <div class="timer-container">
+            <div class="timer-bar" id="timer-bar"></div>
+        </div>
+
         <div class="score">ניקוד: <span id="score-display">0</span></div>
         <div class="feedback" id="feedback-msg"></div>
         <h1 id="question-display"></h1> 
         
         <div id="input-stage">
-            <input type="number" id="answer-input" inputmode="numeric" pattern="[0-9]*" placeholder="תשובה">
-            <button class="btn-primary" onclick="checkInput()">בדקי אותי! (פי 2 נקודות)</button>
+            <input type="number" id="answer-input" inputmode="numeric" placeholder="תשובה">
+            <button class="btn-primary" onclick="checkInput()">בדקי אותי! (פי 2)</button>
             <button class="btn-secondary" onclick="showOptions()">אני צריכה אפשרויות</button>
         </div>
 
         <div id="options-stage"></div>
     </div>
 
-    <!-- מסך הסיכום שיופיע בסוף -->
+    <!-- מסך הסיכום -->
     <div class="card" id="summary-stage">
-        <h1>כל הכבוד! 🎉</h1>
-        <h2>סיימת אימון!</h2>
-        <div class="score" style="font-size: 2rem;">ציון סופי: <span id="final-score"></span></div>
+        <h2>סיימת אימון! 🎉</h2>
+        <div class="score" style="font-size: 2rem;">ציון: <span id="final-score"></span></div>
         
-        <div id="history-list" style="margin: 20px 0; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px;"></div>
+        <div class="stats-box" id="new-prizes-box" style="display:none; background: rgba(255, 215, 0, 0.2);">
+            <div style="font-weight: bold; color: gold; margin-bottom: 5px;">פרסים שהשגת באימון זה:</div>
+            <div id="new-prizes-list"></div>
+        </div>
+
+        <div id="history-list" style="margin: 20px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px;"></div>
         
-        <button class="btn-primary" onclick="startGame()">התחלי אימון חדש</button>
+        <button class="btn-primary" onclick="goToStartMenu()">חזרי לתפריט הראשי</button>
     </div>
 
-    <!-- הקרדיט של אגם -->
     <div class="credit">פותח ועוצב ע״י אגם ג'הסי ✨</div>
 
     <script>
         const TOTAL_QUESTIONS = 10;
+        const TIME_LIMIT = 10000; // 10 seconds
+        
+        // משתני State
+        let bank = [];
+        let sessionQuestions = [];
         let currentQuestionIndex = 0;
         let score = 0;
         let currentAnswer = 0;
-        let currentQuestionText = "";
         let historyList = [];
+        
+        let streak = 0;
+        let fastStreak = 0;
+        let mistakes = 0;
+        let sessionPrizes = [];
+        
+        let timerInterval;
+        let timeLeft = 0;
+
+        // טעינת נתונים שמורים
+        let globalHighScore = parseInt(localStorage.getItem('agamHighScore')) || 0;
+        let globalPrizes = JSON.parse(localStorage.getItem('agamPrizes')) || { streak: 0, fast: 0, perfect: 0 };
+        
+        function initBank() {
+            let savedBank = JSON.parse(localStorage.getItem('agamBank'));
+            if (savedBank && savedBank.length > 0) {
+                bank = savedBank;
+            } else {
+                bank = [];
+                for(let i=1; i<=10; i++) {
+                    for(let j=1; j<=10; j++) {
+                        bank.push({a: i, b: j});
+                    }
+                }
+            }
+            document.getElementById('start-bank-left').innerText = bank.length;
+        }
+
+        function updateStartMenu() {
+            document.getElementById('start-highscore').innerText = globalHighScore;
+            
+            let prizesText = [];
+            if(globalPrizes.streak > 0) prizesText.push(`🔥 רצף נכונות: ${globalPrizes.streak}`);
+            if(globalPrizes.fast > 0) prizesText.push(`⚡ רצף מהירות: ${globalPrizes.fast}`);
+            if(globalPrizes.perfect > 0) prizesText.push(`👑 משחקים מושלמים: ${globalPrizes.perfect}`);
+            
+            document.getElementById('start-prizes').innerHTML = prizesText.length > 0 ? prizesText.join('<br>') : 'עדיין אין פרסים, שחקי כדי לזכות!';
+        }
+
+        // טעינה ראשונית של התפריט
+        initBank();
+        updateStartMenu();
+
+        function goToStartMenu() {
+            document.getElementById('summary-stage').style.display = 'none';
+            document.getElementById('start-stage').style.display = 'block';
+            initBank();
+            updateStartMenu();
+        }
 
         function startGame() {
-            score = 0;
-            currentQuestionIndex = 0;
-            historyList = [];
-            updateScore();
+            score = 0; currentQuestionIndex = 0; historyList = [];
+            streak = 0; fastStreak = 0; mistakes = 0; sessionPrizes = [];
             
+            // שליפת שאלות מהבנק
+            sessionQuestions = [];
+            let tempBank = [...bank].sort(() => Math.random() - 0.5); // ערבוב הבנק
+            for(let i=0; i<TOTAL_QUESTIONS && tempBank.length>0; i++) {
+                sessionQuestions.push(tempBank.pop());
+            }
+
+            document.getElementById('start-stage').style.display = 'none';
             document.getElementById('summary-stage').style.display = 'none';
             document.getElementById('game-card').style.display = 'block';
             
             const dotsContainer = document.getElementById('progress-dots');
             dotsContainer.innerHTML = '';
-            for(let i = 1; i <= TOTAL_QUESTIONS; i++) {
+            for(let i = 0; i < sessionQuestions.length; i++) {
                 const dot = document.createElement('div');
                 dot.className = 'dot';
-                dot.id = 'dot-' + (i - 1); 
-                dot.innerText = i;
+                dot.id = 'dot-' + i; 
+                dot.innerText = (i + 1);
                 dotsContainer.appendChild(dot);
             }
 
+            document.getElementById('score-display').innerText = score;
             nextQuestion();
         }
 
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            document.getElementById('timer-bar').style.width = '100%';
+            
+            timerInterval = setInterval(() => {
+                timeLeft -= 50;
+                if(timeLeft <= 0) {
+                    timeLeft = 0;
+                    clearInterval(timerInterval);
+                }
+                const pct = (timeLeft / TIME_LIMIT) * 100;
+                document.getElementById('timer-bar').style.width = pct + '%';
+            }, 50);
+        }
+
         function nextQuestion() {
-            if (currentQuestionIndex >= TOTAL_QUESTIONS) {
-                showSummary();
+            if (currentQuestionIndex >= sessionQuestions.length) {
+                endGame();
                 return;
             }
 
-            const a = Math.floor(Math.random() * 9) + 2;
-            const b = Math.floor(Math.random() * 9) + 2;
-            currentAnswer = a * b;
-            currentQuestionText = `${a} × ${b}`;
+            const q = sessionQuestions[currentQuestionIndex];
+            currentAnswer = q.a * q.b;
             
-            document.getElementById('question-display').innerText = `${a} × ${b} = ?`;
+            document.getElementById('question-display').innerText = `${q.a} × ${q.b} = ?`;
             document.getElementById('answer-input').value = '';
             document.getElementById('feedback-msg').innerText = '';
             
             document.getElementById('input-stage').style.display = 'block';
             document.getElementById('options-stage').style.display = 'none';
-            document.getElementById('answer-input').focus();
+            
+            setTimeout(() => document.getElementById('answer-input').focus(), 100);
+            startTimer();
         }
 
         function checkInput() {
+            clearInterval(timerInterval);
             const userVal = parseInt(document.getElementById('answer-input').value);
+            const q = sessionQuestions[currentQuestionIndex];
+            
             if (userVal === currentAnswer) {
-                score += 20;
-                updateScore();
-                showFeedback('אלופה! נקודות כפולות! 🎉', 'var(--success)');
+                // חישוב בונוס זמן
+                let timeBonus = Math.floor((timeLeft / TIME_LIMIT) * 10);
+                let points = 20 + timeBonus;
+                score += points;
                 
+                document.getElementById('score-display').innerText = score;
                 document.getElementById('dot-' + currentQuestionIndex).classList.add('green');
-                historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 20 });
+                historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: points });
                 
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#e43f5a', '#ffd700', '#4caf50', '#ffffff'] });
+                // הסרה מהבנק כי היא ידעה
+                bank = bank.filter(item => !(item.a === q.a && item.b === q.b));
+                localStorage.setItem('agamBank', JSON.stringify(bank));
 
+                handleCorrectAnswerState(timeBonus > 5); // מעל 5 נקודות נחשב 'מהיר' (מתחת ל-5 שניות)
+                
+                showFeedback(`מעולה! +${points} נק'`, 'var(--success)');
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                
                 currentQuestionIndex++;
                 setTimeout(nextQuestion, 1500);
             } else {
+                handleWrongAnswerState();
                 showFeedback('כמעט! בואי ננסה עם אפשרויות', 'var(--primary)');
                 showOptions();
             }
@@ -189,9 +323,7 @@
             while(options.size < 4) {
                 let offset = (Math.floor(Math.random() * 3) + 1) * (Math.random() > 0.5 ? 1 : -1);
                 let distractor = currentAnswer + offset;
-                if(distractor > 0 && !options.has(distractor)) {
-                    options.add(distractor);
-                }
+                if(distractor > 0 && !options.has(distractor)) options.add(distractor);
             }
 
             const shuffled = Array.from(options).sort(() => Math.random() - 0.5);
@@ -206,63 +338,110 @@
         }
 
         function checkOption(val, btn) {
+            clearInterval(timerInterval);
             const dot = document.getElementById('dot-' + currentQuestionIndex);
+            const q = sessionQuestions[currentQuestionIndex];
             
             if (val === currentAnswer) {
                 btn.style.background = 'var(--success)';
+                let timeBonus = Math.floor((timeLeft / TIME_LIMIT) * 5); // בונוס קטן יותר באפשרויות
                 
                 if (!dot.classList.contains('red')) {
                     dot.classList.add('green');
-                    score += 10;
-                    historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 10 });
+                    let points = 10 + timeBonus;
+                    score += points;
+                    historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: points });
+                    handleCorrectAnswerState(false); // באפשרויות זה לא נחשב מהיר לפרסים
+                    
+                    // ידעה באפשרויות בניסיון ראשון - נוציא מהבנק
+                    bank = bank.filter(item => !(item.a === q.a && item.b === q.b));
+                    localStorage.setItem('agamBank', JSON.stringify(bank));
                 } else {
-                    historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 0 });
+                    historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: 0 });
+                    // טעתה קודם, תישאר בבנק לאימון הבא
                 }
                 
-                updateScore();
-                confetti({ particleCount: 50, spread: 45, origin: { y: 0.7 } });
-                
+                document.getElementById('score-display').innerText = score;
                 currentQuestionIndex++;
                 setTimeout(nextQuestion, 1000);
             } else {
                 btn.style.background = 'var(--error)';
                 dot.classList.add('red');
+                handleWrongAnswerState(); // נחשב כטעות נוספת
             }
         }
 
-        function updateScore() {
-            document.getElementById('score-display').innerText = score;
+        function handleCorrectAnswerState(isFast) {
+            streak++;
+            if (isFast) fastStreak++; else fastStreak = 0;
+
+            if (streak === 3 && !sessionPrizes.includes('🔥 אש מקלדת!')) {
+                sessionPrizes.push('🔥 אש מקלדת!');
+                globalPrizes.streak++;
+                showFeedback('קיבלת פרס: אש מקלדת! 🔥', 'orange');
+            }
+            if (fastStreak === 3 && !sessionPrizes.includes('⚡ ברק!')) {
+                sessionPrizes.push('⚡ ברק!');
+                globalPrizes.fast++;
+                showFeedback('קיבלת פרס: ברק! ⚡', 'yellow');
+            }
+        }
+
+        function handleWrongAnswerState() {
+            streak = 0; fastStreak = 0; mistakes++;
         }
 
         function showFeedback(text, color) {
             const fb = document.getElementById('feedback-msg');
-            fb.innerText = text;
-            fb.style.color = color;
+            fb.innerText = text; fb.style.color = color;
         }
 
-        function showSummary() {
+        function endGame() {
+            // פרס משחק מושלם
+            if (mistakes === 0 && sessionQuestions.length === TOTAL_QUESTIONS) {
+                sessionPrizes.push('👑 משחק מושלם!');
+                globalPrizes.perfect++;
+            }
+
+            // שמירת שיאים
+            if (score > globalHighScore) {
+                globalHighScore = score;
+                localStorage.setItem('agamHighScore', globalHighScore);
+            }
+            localStorage.setItem('agamPrizes', JSON.stringify(globalPrizes));
+
+            // מעבר מסכים
             document.getElementById('game-card').style.display = 'none';
             document.getElementById('summary-stage').style.display = 'block';
             document.getElementById('final-score').innerText = score;
             
+            // הצגת פרסים שהושגו הפעם
+            const prizeBox = document.getElementById('new-prizes-box');
+            const prizeList = document.getElementById('new-prizes-list');
+            if (sessionPrizes.length > 0) {
+                prizeBox.style.display = 'block';
+                prizeList.innerHTML = sessionPrizes.map(p => `<div>${p}</div>`).join('');
+            } else {
+                prizeBox.style.display = 'none';
+            }
+            
+            // היסטוריה
             const listDiv = document.getElementById('history-list');
             listDiv.innerHTML = '';
-            
             historyList.forEach(item => {
-                const row = document.createElement('div');
-                row.className = 'summary-item';
-                
                 let icon = '❌';
-                if (item.points === 20) icon = '🏆';
-                if (item.points === 10) icon = '✅';
+                if (item.points >= 20) icon = '🏆';
+                else if (item.points >= 10) icon = '✅';
 
-                row.innerHTML = `
-                    <span>${icon} <span style="font-size:0.9rem; color:var(--secondary)">(${item.points} נק')</span></span>
-                    <span dir="ltr">${item.text} = ${item.answer}</span>
+                listDiv.innerHTML += `
+                    <div class="summary-item">
+                        <span>${icon} <span style="font-size:0.9rem; color:var(--secondary)">(${item.points} נק')</span></span>
+                        <span dir="ltr">${item.a} × ${item.b} = ${item.ans}</span>
+                    </div>
                 `;
-                listDiv.appendChild(row);
             });
 
+            // חגיגת סיום
             var duration = 3000;
             var end = Date.now() + duration;
             (function frame() {
@@ -271,8 +450,6 @@
                 if (Date.now() < end) { requestAnimationFrame(frame); }
             }());
         }
-
-        startGame();
     </script>
 </body>
 </html>
