@@ -2,9 +2,9 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <!-- השורה הבאה קריטית להתאמה לנייד -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>החידון של [הכנס שם הילדה]</title>
+    <title>חידון כפל חכם</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --bg: #1b1b2f; --card: #162447; --text: #fff;
@@ -20,13 +20,29 @@
             background: var(--card); padding: 30px 20px; border-radius: 20px;
             width: 100%; max-width: 400px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
         }
+        
+        /* עיצוב 10 העיגולים */
+        #progress-dots {
+            display: flex; justify-content: center; gap: 6px; margin-bottom: 25px;
+        }
+        .dot {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #4a4a6a; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; transition: background-color 0.4s;
+        }
+        .dot.green { background: var(--success); }
+        .dot.red { background: var(--error); }
+
         h1 { font-size: 3rem; margin: 10px 0; direction: ltr; }
-        .score { font-size: 1.2rem; color: #ffd700; font-weight: bold; margin-bottom: 20px; }
+        .score { font-size: 1.2rem; color: #ffd700; font-weight: bold; margin-bottom: 10px; }
+        
         input {
             font-size: 2rem; padding: 15px; width: 80%; text-align: center;
             border: 2px solid var(--secondary); border-radius: 10px;
-            background: transparent; color: var(--text); margin-bottom: 15px;
+            background: transparent; color: var(--text); margin-bottom: 15px; outline: none;
         }
         button {
             font-size: 1.2rem; font-weight: bold; padding: 15px; width: 100%;
@@ -38,16 +54,27 @@
         #options-stage { display: none; grid-template-columns: 1fr 1fr; gap: 10px; }
         .option-btn { background: var(--secondary); font-size: 1.8rem; padding: 20px; margin: 0; }
         .feedback { height: 24px; color: var(--primary); font-weight: bold; margin-bottom: 10px; }
+        
+        /* מסך סיכום */
+        #summary-stage { display: none; }
+        .summary-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 10px; border-bottom: 1px solid var(--secondary);
+            font-size: 1.2rem; direction: rtl;
+        }
+        .summary-item span[dir="ltr"] { font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="card">
+    <!-- מסך המשחק -->
+    <div class="card" id="game-card">
+        <div id="progress-dots"></div> <!-- כאן יופיעו העיגולים -->
+        
         <div class="score">ניקוד: <span id="score-display">0</span></div>
         <div class="feedback" id="feedback-msg"></div>
-        <h1 id="question-display">? = 5 × 5</h1>
+        <h1 id="question-display"></h1> <!-- התרגיל -->
         
         <div id="input-stage">
-            <!-- pattern ותכונות נוספות כדי להקפיץ מקלדת מספרים נוחה בנייד -->
             <input type="number" id="answer-input" inputmode="numeric" pattern="[0-9]*" placeholder="תשובה">
             <button class="btn-primary" onclick="checkInput()">בדקי אותי! (פי 2 נקודות)</button>
             <button class="btn-secondary" onclick="showOptions()">אני צריכה אפשרויות</button>
@@ -56,17 +83,64 @@
         <div id="options-stage"></div>
     </div>
 
+    <!-- מסך הסיכום שיופיע בסוף -->
+    <div class="card" id="summary-stage">
+        <h1>כל הכבוד! 🎉</h1>
+        <h2>סיימת אימון!</h2>
+        <div class="score" style="font-size: 2rem;">ציון סופי: <span id="final-score"></span></div>
+        
+        <!-- רשימת ההיסטוריה תכנס לכאן -->
+        <div id="history-list" style="margin: 20px 0; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px;"></div>
+        
+        <button class="btn-primary" onclick="startGame()">התחלי אימון חדש</button>
+    </div>
+
     <script>
+        const TOTAL_QUESTIONS = 10;
+        let currentQuestionIndex = 0;
         let score = 0;
         let currentAnswer = 0;
+        let currentQuestionText = "";
+        let historyList = [];
+
+        function startGame() {
+            score = 0;
+            currentQuestionIndex = 0;
+            historyList = [];
+            updateScore();
+            
+            document.getElementById('summary-stage').style.display = 'none';
+            document.getElementById('game-card').style.display = 'block';
+            
+            // יצירת 10 העיגולים באופן דינמי
+            const dotsContainer = document.getElementById('progress-dots');
+            dotsContainer.innerHTML = '';
+            for(let i = 1; i <= TOTAL_QUESTIONS; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.id = 'dot-' + (i - 1); // המזהה יתחיל מ-0 עד 9
+                dot.innerText = i;
+                dotsContainer.appendChild(dot);
+            }
+
+            nextQuestion();
+        }
 
         function nextQuestion() {
-            // הגרלת מספרים מ-2 עד 10
+            // אם סיימנו את כל השאלות, עוברים למסך סיכום
+            if (currentQuestionIndex >= TOTAL_QUESTIONS) {
+                showSummary();
+                return;
+            }
+
+            // הגרלת תרגיל כפל
             const a = Math.floor(Math.random() * 9) + 2;
             const b = Math.floor(Math.random() * 9) + 2;
             currentAnswer = a * b;
+            currentQuestionText = `${a} × ${b}`;
             
-            document.getElementById('question-display').innerText = `? = ${a} ×${b}`;
+            // הגדרת משמאל לימין בכוח (ltr)
+            document.getElementById('question-display').innerText = `${a} × ${b} = ?`;
             document.getElementById('answer-input').value = '';
             document.getElementById('feedback-msg').innerText = '';
             
@@ -75,12 +149,23 @@
             document.getElementById('answer-input').focus();
         }
 
+        // בדיקה משלב ראשון (הקלדה חופשית)
         function checkInput() {
             const userVal = parseInt(document.getElementById('answer-input').value);
             if (userVal === currentAnswer) {
                 score += 20;
                 updateScore();
                 showFeedback('אלופה! נקודות כפולות! 🎉', 'var(--success)');
+                
+                // צביעת העיגול הנוכחי בירוק
+                document.getElementById('dot-' + currentQuestionIndex).classList.add('green');
+                
+                // הוספה להיסטוריה
+                historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 20 });
+                
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#e43f5a', '#ffd700', '#4caf50', '#ffffff'] });
+
+                currentQuestionIndex++;
                 setTimeout(nextQuestion, 1500);
             } else {
                 showFeedback('כמעט! בואי ננסה עם אפשרויות', 'var(--primary)');
@@ -88,13 +173,13 @@
             }
         }
 
+        // מעבר למצב 4 כפתורים ויצירת מסיחים
         function showOptions() {
             document.getElementById('input-stage').style.display = 'none';
             const optionsStage = document.getElementById('options-stage');
             optionsStage.style.display = 'grid';
             optionsStage.innerHTML = '';
 
-            // יצירת מסיחים חכמים
             let options = new Set([currentAnswer]);
             while(options.size < 4) {
                 let offset = (Math.floor(Math.random() * 3) + 1) * (Math.random() > 0.5 ? 1 : -1);
@@ -104,7 +189,6 @@
                 }
             }
 
-            // ערבוב התשובות
             const shuffled = Array.from(options).sort(() => Math.random() - 0.5);
 
             shuffled.forEach(opt => {
@@ -116,14 +200,32 @@
             });
         }
 
+        // בדיקה משלב שני (4 כפתורים)
         function checkOption(val, btn) {
+            const dot = document.getElementById('dot-' + currentQuestionIndex);
+            
             if (val === currentAnswer) {
                 btn.style.background = 'var(--success)';
-                score += 10;
+                
+                // אם העיגול עדיין לא נצבע באדום (צדקה בניסיון ראשון באפשרויות)
+                if (!dot.classList.contains('red')) {
+                    dot.classList.add('green');
+                    score += 10;
+                    historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 10 });
+                } else {
+                    // הצליחה בסוף, אבל אחרי שטעתה קודם לכן באחד הכפתורים
+                    historyList.push({ text: currentQuestionText, answer: currentAnswer, points: 0 });
+                }
+                
                 updateScore();
+                confetti({ particleCount: 50, spread: 45, origin: { y: 0.7 } });
+                
+                currentQuestionIndex++;
                 setTimeout(nextQuestion, 1000);
             } else {
+                // טעתה - הכפתור והעיגול נצבעים מיד באדום!
                 btn.style.background = 'var(--error)';
+                dot.classList.add('red');
             }
         }
 
@@ -137,8 +239,43 @@
             fb.style.color = color;
         }
 
-        // התחלת המשחק
-        nextQuestion();
+        // תצוגת מסך הסיכום וההיסטוריה
+        function showSummary() {
+            document.getElementById('game-card').style.display = 'none';
+            document.getElementById('summary-stage').style.display = 'block';
+            document.getElementById('final-score').innerText = score;
+            
+            const listDiv = document.getElementById('history-list');
+            listDiv.innerHTML = '';
+            
+            historyList.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'summary-item';
+                
+                // אייקונים לפי הניקוד
+                let icon = '❌';
+                if (item.points === 20) icon = '🏆';
+                if (item.points === 10) icon = '✅';
+
+                row.innerHTML = `
+                    <span>${icon} <span style="font-size:0.9rem; color:var(--secondary)">(${item.points} נק')</span></span>
+                    <span dir="ltr">${item.text} = ${item.answer}</span>
+                `;
+                listDiv.appendChild(row);
+            });
+
+            // חגיגת קונפטי רצופה של סיום משחק (נמשכת 3 שניות)
+            var duration = 3000;
+            var end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#e43f5a', '#ffd700'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#4caf50', '#ffffff'] });
+                if (Date.now() < end) { requestAnimationFrame(frame); }
+            }());
+        }
+
+        // טעינה ראשונית של המשחק
+        startGame();
     </script>
 </body>
 </html>
