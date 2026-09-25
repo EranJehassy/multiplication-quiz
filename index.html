@@ -21,17 +21,15 @@
             background: var(--card); padding: 30px 20px; border-radius: 20px;
             width: 100%; max-width: 400px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative; z-index: 10; display: none; /* מוסתר כברירת מחדל */
+            position: relative; z-index: 10; display: none;
         }
         
-        /* הסרת החצים (Spinners) משדה המספר */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; margin: 0; 
         }
         input[type=number] { -moz-appearance: textfield; }
 
-        /* פס הזמן האדום */
         .timer-container {
             width: 100%; height: 8px; background: rgba(0,0,0,0.3);
             border-radius: 5px; overflow: hidden; margin-bottom: 15px;
@@ -41,7 +39,6 @@
             width: 100%; transition: width 0.1s linear;
         }
 
-        /* עיצוב 10 העיגולים */
         #progress-dots {
             display: flex; justify-content: center; gap: 6px; margin-bottom: 20px;
         }
@@ -75,7 +72,6 @@
         
         .feedback { height: 24px; color: var(--primary); font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; }
         
-        /* רשימות ותצוגות מיוחדות */
         .summary-item, .prize-item { 
             display: flex; justify-content: space-between; align-items: center;
             padding: 10px; border-bottom: 1px solid var(--secondary);
@@ -92,11 +88,21 @@
             margin-top: 25px; font-size: 0.9rem; color: var(--text);
             opacity: 0.6; text-align: center; letter-spacing: 0.5px;
         }
+
+        /* אנימציה לשבירת שיא */
+        @keyframes bounceRecord {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-5px) scale(1.05); text-shadow: 0 0 10px #ffd700; }
+        }
+        #new-record-msg {
+            display: none; color: #ffd700; font-weight: bold; 
+            font-size: 1.6rem; margin-bottom: 15px; 
+            animation: bounceRecord 1s infinite;
+        }
     </style>
 </head>
 <body>
 
-    <!-- תפריט התחלה -->
     <div class="card" id="start-stage" style="display: block;">
         <h1>החידון של אגם ✨</h1>
         <p>תרגול חכם של כל לוח הכפל!</p>
@@ -116,7 +122,6 @@
         <button class="btn-primary" onclick="startGame()" style="font-size: 1.5rem;">התחלי אימון!</button>
     </div>
 
-    <!-- מסך המשחק -->
     <div class="card" id="game-card">
         <div id="progress-dots"></div> 
         
@@ -137,10 +142,10 @@
         <div id="options-stage"></div>
     </div>
 
-    <!-- מסך הסיכום -->
     <div class="card" id="summary-stage">
         <h2>סיימת אימון! 🎉</h2>
-        <div class="score" style="font-size: 2rem;">ציון: <span id="final-score"></span></div>
+        <div class="score" style="font-size: 2rem; margin-bottom: 5px;">ציון: <span id="final-score"></span></div>
+        <div id="new-record-msg">🏆 שיא חדש! 🏆</div> <!-- כותרת השיא החדש -->
         
         <div class="stats-box" id="new-prizes-box" style="display:none; background: rgba(255, 215, 0, 0.2);">
             <div style="font-weight: bold; color: gold; margin-bottom: 5px;">פרסים שהשגת באימון זה:</div>
@@ -156,9 +161,8 @@
 
     <script>
         const TOTAL_QUESTIONS = 10;
-        const TIME_LIMIT = 10000; // 10 seconds
+        const TIME_LIMIT = 20000; // שונה ל-20 שניות
         
-        // משתני State
         let bank = [];
         let sessionQuestions = [];
         let currentQuestionIndex = 0;
@@ -174,7 +178,6 @@
         let timerInterval;
         let timeLeft = 0;
 
-        // טעינת נתונים שמורים
         let globalHighScore = parseInt(localStorage.getItem('agamHighScore')) || 0;
         let globalPrizes = JSON.parse(localStorage.getItem('agamPrizes')) || { streak: 0, fast: 0, perfect: 0 };
         
@@ -204,7 +207,6 @@
             document.getElementById('start-prizes').innerHTML = prizesText.length > 0 ? prizesText.join('<br>') : 'עדיין אין פרסים, שחקי כדי לזכות!';
         }
 
-        // טעינה ראשונית של התפריט
         initBank();
         updateStartMenu();
 
@@ -219,15 +221,15 @@
             score = 0; currentQuestionIndex = 0; historyList = [];
             streak = 0; fastStreak = 0; mistakes = 0; sessionPrizes = [];
             
-            // שליפת שאלות מהבנק
             sessionQuestions = [];
-            let tempBank = [...bank].sort(() => Math.random() - 0.5); // ערבוב הבנק
+            let tempBank = [...bank].sort(() => Math.random() - 0.5); 
             for(let i=0; i<TOTAL_QUESTIONS && tempBank.length>0; i++) {
                 sessionQuestions.push(tempBank.pop());
             }
 
             document.getElementById('start-stage').style.display = 'none';
             document.getElementById('summary-stage').style.display = 'none';
+            document.getElementById('new-record-msg').style.display = 'none';
             document.getElementById('game-card').style.display = 'block';
             
             const dotsContainer = document.getElementById('progress-dots');
@@ -286,7 +288,6 @@
             const q = sessionQuestions[currentQuestionIndex];
             
             if (userVal === currentAnswer) {
-                // חישוב בונוס זמן
                 let timeBonus = Math.floor((timeLeft / TIME_LIMIT) * 10);
                 let points = 20 + timeBonus;
                 score += points;
@@ -295,11 +296,10 @@
                 document.getElementById('dot-' + currentQuestionIndex).classList.add('green');
                 historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: points });
                 
-                // הסרה מהבנק כי היא ידעה
                 bank = bank.filter(item => !(item.a === q.a && item.b === q.b));
                 localStorage.setItem('agamBank', JSON.stringify(bank));
 
-                handleCorrectAnswerState(timeBonus > 5); // מעל 5 נקודות נחשב 'מהיר' (מתחת ל-5 שניות)
+                handleCorrectAnswerState(timeBonus > 5); 
                 
                 showFeedback(`מעולה! +${points} נק'`, 'var(--success)');
                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -344,21 +344,19 @@
             
             if (val === currentAnswer) {
                 btn.style.background = 'var(--success)';
-                let timeBonus = Math.floor((timeLeft / TIME_LIMIT) * 5); // בונוס קטן יותר באפשרויות
+                let timeBonus = Math.floor((timeLeft / TIME_LIMIT) * 5); 
                 
                 if (!dot.classList.contains('red')) {
                     dot.classList.add('green');
                     let points = 10 + timeBonus;
                     score += points;
                     historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: points });
-                    handleCorrectAnswerState(false); // באפשרויות זה לא נחשב מהיר לפרסים
+                    handleCorrectAnswerState(false); 
                     
-                    // ידעה באפשרויות בניסיון ראשון - נוציא מהבנק
                     bank = bank.filter(item => !(item.a === q.a && item.b === q.b));
                     localStorage.setItem('agamBank', JSON.stringify(bank));
                 } else {
                     historyList.push({ a: q.a, b: q.b, ans: currentAnswer, points: 0 });
-                    // טעתה קודם, תישאר בבנק לאימון הבא
                 }
                 
                 document.getElementById('score-display').innerText = score;
@@ -367,7 +365,7 @@
             } else {
                 btn.style.background = 'var(--error)';
                 dot.classList.add('red');
-                handleWrongAnswerState(); // נחשב כטעות נוספת
+                handleWrongAnswerState(); 
             }
         }
 
@@ -397,25 +395,32 @@
         }
 
         function endGame() {
-            // פרס משחק מושלם
             if (mistakes === 0 && sessionQuestions.length === TOTAL_QUESTIONS) {
                 sessionPrizes.push('👑 משחק מושלם!');
                 globalPrizes.perfect++;
             }
 
-            // שמירת שיאים
+            // בדיקת שיא חדש (השיא הקודם חייב להיות גדול מ-0 כדי שלא יקפוץ במשחק הראשון אי פעם)
+            let isNewRecord = false;
+            if (score > globalHighScore && globalHighScore > 0) {
+                isNewRecord = true;
+            }
+
             if (score > globalHighScore) {
                 globalHighScore = score;
                 localStorage.setItem('agamHighScore', globalHighScore);
             }
             localStorage.setItem('agamPrizes', JSON.stringify(globalPrizes));
 
-            // מעבר מסכים
             document.getElementById('game-card').style.display = 'none';
             document.getElementById('summary-stage').style.display = 'block';
             document.getElementById('final-score').innerText = score;
             
-            // הצגת פרסים שהושגו הפעם
+            // הצגת הודעת שיא חדש
+            if (isNewRecord) {
+                document.getElementById('new-record-msg').style.display = 'block';
+            }
+            
             const prizeBox = document.getElementById('new-prizes-box');
             const prizeList = document.getElementById('new-prizes-list');
             if (sessionPrizes.length > 0) {
@@ -425,7 +430,6 @@
                 prizeBox.style.display = 'none';
             }
             
-            // היסטוריה
             const listDiv = document.getElementById('history-list');
             listDiv.innerHTML = '';
             historyList.forEach(item => {
@@ -441,8 +445,8 @@
                 `;
             });
 
-            // חגיגת סיום
-            var duration = 3000;
+            // חגיגת סיום (אם זה שיא חדש - הקונפטי נמשך 5 שניות במקום 3!)
+            var duration = isNewRecord ? 5000 : 3000;
             var end = Date.now() + duration;
             (function frame() {
                 confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#e43f5a', '#ffd700'] });
